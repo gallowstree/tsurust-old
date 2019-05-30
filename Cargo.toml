@@ -1,0 +1,7 @@
+[package]
+name = "tsurust"
+version = "0.1.0"
+authors = ["Alejandro Alvarado <alejalvarado@paypal.com>"]
+edition = "2018"
+
+[dependencies]
