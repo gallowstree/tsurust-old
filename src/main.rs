@@ -1,15 +1,12 @@
-use std::fs::File;
-use std::io::BufReader;
-use std::io::BufRead;
 use itertools::Itertools;
-use rand::thread_rng;
 use rand::seq::SliceRandom;
-
-
+use rand::thread_rng;
+use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
 
 fn main() {
     let deck = Deck::from_file("tiles.txt").expect("Unable to create deck from tiles.txt");
-
 }
 
 #[derive(Debug)]
@@ -23,19 +20,16 @@ enum Rotation {
 #[derive(Debug)]
 enum Tile {
     DragonTile,
-    PathTile {
-        paths: [u8; 8],
-        rotation: Rotation
-    }
+    PathTile { paths: [u8; 8], rotation: Rotation },
 }
 
 #[derive(Debug)]
 struct Deck {
-    tiles: Vec<Tile>
+    tiles: Vec<Tile>,
 }
 
 impl Deck {
-    pub fn from_file(filename: &str) -> Result<Deck,String>{
+    pub fn from_file(filename: &str) -> Result<Deck, String> {
         let file = File::open(filename).or(Err("Can't open file"))?;
         let reader = BufReader::new(file);
 
@@ -52,7 +46,7 @@ impl Deck {
         tiles.shuffle(&mut rng);
         tiles.push(Tile::DragonTile);
 
-        Ok(Deck {tiles})
+        Ok(Deck { tiles })
     }
 
     pub fn draw_tile(mut self) -> Option<Tile> {
@@ -66,7 +60,7 @@ impl Deck {
             .map(|char| char.to_digit(10).ok_or("Tile data must be numeric"))
             .collect();
 
-        let mut paths :[u8;8] = [0;8];
+        let mut paths: [u8; 8] = [0; 8];
 
         for (from, to) in digits?.into_iter().tuples() {
             paths[from as usize] = to as u8;
@@ -75,6 +69,6 @@ impl Deck {
 
         let rotation = Rotation::_0;
 
-        Ok(Tile::PathTile {paths, rotation})
+        Ok(Tile::PathTile { paths, rotation })
     }
 }
