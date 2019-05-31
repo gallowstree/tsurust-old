@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufRead;
+use itertools::Itertools;
+
 
 fn main() {
     let file = File::open("tiles.txt").expect("Can't open tiles.txt");
@@ -8,26 +10,26 @@ fn main() {
     let tiles = reader
         .lines()
         .map(|line_result| line_result.expect("failed to read tile data"))
-        .map(|tile_text| parse_tile(tile_text));
+        .map(|tile_text| parse_tile(tile_text))
+        .for_each(|tile| println!("{:?}", tile));
 }
 
-fn parse_tile(tile_text: String) -> Option<Tile> {
+fn parse_tile(tile_text: String) -> Tile {
+    let tile_text = tile_text.replace(" ", "");
+    let digits = tile_text
+        .chars()
+        .map(|char| char.to_digit(10).unwrap());
+
     let mut paths :[u8;8] = [0;8];
 
-    let mut digits = tile_text.replace(" ", "")
-        .chars()
-        .map(|char| char.to_digit(10).expect("Tile data is not a digit"));
-
-
-    while digits.peekable().peek().is_some() {
-        let path_1 = digits.next().unwrap();
-        let path_2 = digits.next().unwrap();
-        paths[path_1] = path_2;
-        paths[path_2] = path_1;
+    for (from, to) in digits.tuples() {
+        paths[from as usize] = to as u8;
+        paths[to as usize] = from as u8;
     }
 
     let rotation = Rotation::_0;
-    Some(Tile {paths, rotation})
+
+    Tile {paths, rotation}
 }
 
 #[derive(Debug)]

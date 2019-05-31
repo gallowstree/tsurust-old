@@ -5,3 +5,4 @@ authors = ["Alejandro Alvarado <alejalvarado@paypal.com>"]
 edition = "2018"
 
 [dependencies]
+itertools = "0.8"
