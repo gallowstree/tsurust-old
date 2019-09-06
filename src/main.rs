@@ -57,7 +57,20 @@ fn main() {
     let settings = Settings {
         ..Default::default()
     };
-    run::<Game>("TsuRusT", Vector::new(SCREEN_WIDTH, SCREEN_HEIGHT), settings);
+    //run::<Game>("TsuRusT", Vector::new(SCREEN_WIDTH, SCREEN_HEIGHT), settings);
+
+    let mut deck = Deck::from_file("tiles.txt").expect("Unable to create deck from tiles.txt");
+
+    while let Some(tile) = deck.pop_tile() {
+        if let Tile::PathTile {paths, rotation} = tile {
+            println!("{:?}", tile);
+            paths.iter().
+                map(|p| (p, Board::normalize_path(p)))
+                .for_each(|(before, after)|print!("\t{:?} => {:?}", before, &after))
+        }
+        println!()
+    }
+
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -178,32 +191,31 @@ impl Board {
         let rect = Rectangle::new((x as u32 * TILE_SIDE_LENGTH, y as u32 * TILE_SIDE_LENGTH), (TILE_SIDE_LENGTH, TILE_SIDE_LENGTH));
         window.draw(&rect.translate((BOARD_BORDER, BOARD_BORDER)), Col(Color::BLUE));
 
-   /*     match tile {
-            Tile::PathTile{paths, rotation} => {
-                paths.iter()
-                    .for_each(|(from, to)| {
-
-                    })
-            },
-            _ => {}
-        }*/
-
+        if let Tile::PathTile { paths, rotation } = tile {
+            Board::draw_paths(paths, rotation, x, y, window)
+        }
     }
 
     fn draw_empty_space(x: usize, y: usize, window:&mut Window) -> () {
         let rect = Rectangle::new((x as u32 * TILE_SIDE_LENGTH, y as u32 * TILE_SIDE_LENGTH), (TILE_SIDE_LENGTH, TILE_SIDE_LENGTH));
         window.draw(&rect.translate((BOARD_BORDER, BOARD_BORDER)), Col(Color::from_rgba(127, 127, 127, 1.0)));
     }
-
-/*
-
-    fn normalize_path(from: u8, to: u8) -> (u8, u8) {
+    // Need to be able to revert this or deduce the correct orientation for drawing
+    fn normalize_path(path: &Path) -> Path {
+        let (from, to) = path;
         let new_from = from % 2;
         let new_to = new_from + (to - from);
+        (new_from, new_to)
     }
-*/
 
+    fn draw_paths(paths:&[Path; 4], rotation: &Rotation, x: usize, y: usize, window: &mut Window) {
+        paths.iter()
+            .map(Board::normalize_path)
+            .for_each(|p| println!("{:?}", p));
+    }
 
 }
 
-
+enum PathShape {
+    ZeroToOne()
+}
