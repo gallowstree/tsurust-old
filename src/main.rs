@@ -6,10 +6,13 @@ use std::io::BufRead;
 use std::io::BufReader;
 use quicksilver::prelude::*;
 use std::result::Result;
+use arrayvec::ArrayVec;
 
 const SCALE: u32 = 2;
 const SCREEN_WIDTH: u32 = 600 * SCALE;
 const SCREEN_HEIGHT: u32 = 500 * SCALE;
+
+type Path = (u8, u8);
 
 struct Game {
     deck: Deck,
@@ -17,32 +20,30 @@ struct Game {
 }
 
 impl State for Game {
-    /// Load the assets and initialise the game
+
     fn new() -> quicksilver::Result<Self> {
         let mut deck = Deck::from_file("tiles.txt").expect("Unable to create deck from tiles.txt");
         let mut board = Board::default();
 
-        deck.draw_next_tile().map(|tile| {
+        deck.pop_tile().map(|tile| {
             board.place_tile(0, 0, tile);
         });
 
-        deck.draw_next_tile().map(|tile| {
+        deck.pop_tile().map(|tile| {
             board.place_tile(3, 0, tile);
         });
 
-        deck.draw_next_tile().map(|tile| {
-            board.place_tile(3, 3, tile);
+        deck.pop_tile().map(|tile| {
+            board.place_tile(1, 3, tile);
         });
 
         Ok(Self {deck, board})
     }
 
-    /// Process keyboard and mouse, update the game state
     fn update(&mut self, window: &mut Window) -> quicksilver::Result<()> {
         Ok(())
     }
 
-    /// Draw stuff on the screen
     fn draw(&mut self, window: &mut Window) -> quicksilver::Result<()> {
 
         window.clear(Color::ORANGE);
@@ -70,7 +71,10 @@ enum Rotation {
 #[derive(Debug, Copy, Clone)]
 enum Tile {
     DragonTile,
-    PathTile { paths: [u8; 8], rotation: Rotation },
+    PathTile {
+        paths: [Path; 4],
+        rotation: Rotation
+    },
 }
 
 #[derive(Debug)]
@@ -103,23 +107,23 @@ impl Deck {
         Ok(Deck { tiles })
     }
 
-    pub fn draw_next_tile(&mut self) -> Option<Tile> {
+    pub fn pop_tile(&mut self) -> Option<Tile> {
         self.tiles.pop()
     }
 
     fn parse_tile(tile_text: &str) -> Result<Tile, String> {
         let tile_text = tile_text.replace(" ", "");
-        let digits: Result<Vec<u32>, _> = tile_text
+        let digits: Result<Vec<u8>, _> = tile_text
             .chars()
             .map(|char| char.to_digit(10).ok_or("Tile data must be numeric"))
+            .map(|digit| digit.map(|d| d as u8))
             .collect();
 
-        let mut paths: [u8; 8] = [0; 8];
+        let paths : ArrayVec<[_; 4]> = digits?.into_iter()
+            .tuples()
+            .collect();
 
-        for (from, to) in digits?.into_iter().tuples() {
-            paths[from as usize] = to as u8;
-            paths[to as usize] = from as u8;
-        }
+        let paths = paths.into_inner().unwrap();
 
         let rotation = Rotation::_0;
 
@@ -173,12 +177,33 @@ impl Board {
     fn draw_tile(tile: &Tile, x: usize, y: usize, window:&mut Window) -> () {
         let rect = Rectangle::new((x as u32 * TILE_SIDE_LENGTH, y as u32 * TILE_SIDE_LENGTH), (TILE_SIDE_LENGTH, TILE_SIDE_LENGTH));
         window.draw(&rect.translate((BOARD_BORDER, BOARD_BORDER)), Col(Color::BLUE));
+
+   /*     match tile {
+            Tile::PathTile{paths, rotation} => {
+                paths.iter()
+                    .for_each(|(from, to)| {
+
+                    })
+            },
+            _ => {}
+        }*/
+
     }
 
     fn draw_empty_space(x: usize, y: usize, window:&mut Window) -> () {
         let rect = Rectangle::new((x as u32 * TILE_SIDE_LENGTH, y as u32 * TILE_SIDE_LENGTH), (TILE_SIDE_LENGTH, TILE_SIDE_LENGTH));
         window.draw(&rect.translate((BOARD_BORDER, BOARD_BORDER)), Col(Color::from_rgba(127, 127, 127, 1.0)));
     }
+
+/*
+
+    fn normalize_path(from: u8, to: u8) -> (u8, u8) {
+        let new_from = from % 2;
+        let new_to = new_from + (to - from);
+    }
+*/
+
+
 }
 
 
