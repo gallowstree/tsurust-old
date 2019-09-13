@@ -132,7 +132,7 @@ impl Deck {
             .map(|digit| digit.map(|d| d as u8))
             .collect();
 
-        let paths : ArrayVec<[_; 4]> = digits?.into_iter()
+        let paths : ArrayVec<[Path; 4]> = digits?.into_iter()
             .tuples()
             .collect();
 
@@ -200,7 +200,7 @@ impl Board {
         let rect = Rectangle::new((x as u32 * TILE_SIDE_LENGTH, y as u32 * TILE_SIDE_LENGTH), (TILE_SIDE_LENGTH, TILE_SIDE_LENGTH));
         window.draw(&rect.translate((BOARD_BORDER, BOARD_BORDER)), Col(Color::from_rgba(127, 127, 127, 1.0)));
     }
-    // Need to be able to revert this or deduce the correct orientation for drawing
+
     fn normalize_path(path: &Path) -> Path {
         let (from, to) = path;
         let new_from = from % 2;
@@ -210,12 +210,8 @@ impl Board {
 
     fn draw_paths(paths:&[Path; 4], rotation: &Rotation, x: usize, y: usize, window: &mut Window) {
         paths.iter()
-            .map(Board::normalize_path)
+            .map(|path| (Board::normalize_path(path), path))
             .for_each(|p| println!("{:?}", p));
     }
 
-}
-
-enum PathShape {
-    ZeroToOne()
 }
