@@ -57,8 +57,8 @@ fn main() {
     let settings = Settings {
         ..Default::default()
     };
-    //run::<Game>("TsuRusT", Vector::new(SCREEN_WIDTH, SCREEN_HEIGHT), settings);
-
+    run::<Game>("TsuRusT", Vector::new(SCREEN_WIDTH, SCREEN_HEIGHT), settings);
+/*
     let mut deck = Deck::from_file("tiles.txt").expect("Unable to create deck from tiles.txt");
 
     while let Some(tile) = deck.pop_tile() {
@@ -70,7 +70,7 @@ fn main() {
         }
         println!()
     }
-
+*/
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -96,6 +96,10 @@ struct Deck {
 }
 
 impl Deck {
+    pub fn pop_tile(&mut self) -> Option<Tile> {
+        self.tiles.pop()
+    }
+
     pub fn from_file(filename: &str) -> Result<Deck, String> {
         let file = File::open(filename).or(Err("Can't open file"))?;
         let reader = BufReader::new(file);
@@ -118,10 +122,6 @@ impl Deck {
         tiles.push(Tile::DragonTile);
 
         Ok(Deck { tiles })
-    }
-
-    pub fn pop_tile(&mut self) -> Option<Tile> {
-        self.tiles.pop()
     }
 
     fn parse_tile(tile_text: &str) -> Result<Tile, String> {
@@ -171,8 +171,13 @@ impl Default for Board {
 }
 
 impl Drawable for Board {
+
     fn draw(&self, window:&mut Window) -> () {
-        window.draw(&Rectangle::new((BOARD_BORDER, BOARD_BORDER), (BOARD_SIDE_LENGTH, BOARD_SIDE_LENGTH)), Col(Color::BLACK));
+        let board_position = (BOARD_BORDER, BOARD_BORDER);
+        let board_size = (BOARD_SIDE_LENGTH, BOARD_SIDE_LENGTH);
+        let board_rect = Rectangle::new(board_position, board_size);
+
+        window.draw(&board_rect, Col(Color::BLACK));
 
         for (y, row) in self.grid.iter().enumerate() {
             for (x, tile) in row.iter().enumerate() {
@@ -183,13 +188,13 @@ impl Drawable for Board {
             }
         }
     }
-
 }
 
 impl Board {
     fn draw_tile(tile: &Tile, x: usize, y: usize, window:&mut Window) -> () {
-        let rect = Rectangle::new((x as u32 * TILE_SIDE_LENGTH, y as u32 * TILE_SIDE_LENGTH), (TILE_SIDE_LENGTH, TILE_SIDE_LENGTH));
-        window.draw(&rect.translate((BOARD_BORDER, BOARD_BORDER)), Col(Color::BLUE));
+        let rect = Board::tile_square_at(x, y);
+
+        window.draw(&rect, Col(Color::BLUE));
 
         if let Tile::PathTile { paths, rotation } = tile {
             Board::draw_paths(paths, rotation, x, y, window)
@@ -197,8 +202,10 @@ impl Board {
     }
 
     fn draw_empty_space(x: usize, y: usize, window:&mut Window) -> () {
-        let rect = Rectangle::new((x as u32 * TILE_SIDE_LENGTH, y as u32 * TILE_SIDE_LENGTH), (TILE_SIDE_LENGTH, TILE_SIDE_LENGTH));
-        window.draw(&rect.translate((BOARD_BORDER, BOARD_BORDER)), Col(Color::from_rgba(127, 127, 127, 1.0)));
+        let rect = Board::tile_square_at(x, y);
+        let bkg_col = Col(Color::from_rgba(127, 127, 127, 1.0));
+
+        window.draw(&rect, bkg_col);
     }
 
     fn normalize_path(path: &Path) -> Path {
@@ -212,6 +219,13 @@ impl Board {
         paths.iter()
             .map(|path| (Board::normalize_path(path), path))
             .for_each(|p| println!("{:?}", p));
+    }
+
+    fn tile_square_at(x: usize, y: usize) -> Rectangle {
+        let position = (x as u32 * TILE_SIDE_LENGTH, y as u32 * TILE_SIDE_LENGTH);
+        let size = (TILE_SIDE_LENGTH, TILE_SIDE_LENGTH);
+        let border_offset = (BOARD_BORDER, BOARD_BORDER);
+        Rectangle::new(position, size).translate(border_offset)
     }
 
 }
