@@ -7,6 +7,9 @@ use std::io::BufReader;
 use quicksilver::prelude::*;
 use std::result::Result;
 use arrayvec::ArrayVec;
+use crate::Tile::PathTile;
+use std::ops::Deref;
+use quicksilver::graphics::{Drawable, Mesh};
 
 const SCALE: u32 = 2;
 const SCREEN_WIDTH: u32 = 600 * SCALE;
@@ -25,17 +28,8 @@ impl State for Game {
         let mut deck = Deck::from_file("tiles.txt").expect("Unable to create deck from tiles.txt");
         let mut board = Board::default();
 
-        deck.pop_tile().map(|tile| {
-            board.place_tile(0, 0, tile);
-        });
-
-        deck.pop_tile().map(|tile| {
-            board.place_tile(3, 0, tile);
-        });
-
-        deck.pop_tile().map(|tile| {
-            board.place_tile(1, 3, tile);
-        });
+        let normalized_pound_sign_tile = PathTile {paths: [(0,5), (1,4), (2,7), (3,6)], rotation: Rotation::_0};
+        board.place_tile(1,2, normalized_pound_sign_tile);
 
         Ok(Self {deck, board})
     }
@@ -154,8 +148,12 @@ struct Board {
     grid: [[Option<Tile> ; TILES_PER_ROW] ; TILES_PER_ROW],
 }
 
-trait Drawable {
+trait UI {
     fn draw(&self, window:&mut Window) -> ();
+
+    fn draw_ex(&self, window:&mut Window, trans: Transform, col: Color) {
+        self.draw(window);
+    }
 }
 
 impl Board {
@@ -170,14 +168,25 @@ impl Default for Board {
     }
 }
 
-impl Drawable for Board {
+impl UI for Line {
+    fn draw(&self, window: &mut Window) -> () {
+        window.draw(self, Col(Color::BLACK));
+    }
 
+    fn draw_ex(&self, window: &mut Window, trans: Transform, col: Color) {
+        window.draw_ex(self, Col(col), trans, 1);
+    }
+}
+
+
+impl UI for Board {
     fn draw(&self, window:&mut Window) -> () {
         let board_position = (BOARD_BORDER, BOARD_BORDER);
         let board_size = (BOARD_SIDE_LENGTH, BOARD_SIDE_LENGTH);
         let board_rect = Rectangle::new(board_position, board_size);
 
         window.draw(&board_rect, Col(Color::BLACK));
+        //TODO draw grid lines here? or do it in the empty spaces?
 
         for (y, row) in self.grid.iter().enumerate() {
             for (x, tile) in row.iter().enumerate() {
@@ -190,11 +199,14 @@ impl Drawable for Board {
     }
 }
 
+
 impl Board {
+    const PATH_THICKNESS : u8 = 4;
+
     fn draw_tile(tile: &Tile, x: usize, y: usize, window:&mut Window) -> () {
         let rect = Board::tile_square_at(x, y);
 
-        window.draw(&rect, Col(Color::BLUE));
+        window.draw(&rect, Col(Color::BLACK));
 
         if let Tile::PathTile { paths, rotation } = tile {
             Board::draw_paths(paths, rotation, x, y, window)
@@ -218,14 +230,60 @@ impl Board {
     fn draw_paths(paths:&[Path; 4], rotation: &Rotation, x: usize, y: usize, window: &mut Window) {
         paths.iter()
             .map(|path| (Board::normalize_path(path), path))
-            .for_each(|p| println!("{:?}", p));
+            .for_each(|(original_path, normalized_path)| {
+                let offset = Board::coords_to_pixels(x, y);
+                let transform = Transform::translate(offset);
+                let path_drawable = Board::get_path_drawable(normalized_path);
+
+                path_drawable.deref().draw_ex(window, transform, Color::WHITE);
+            });
+    }
+
+    fn get_path_drawable(normalized_path: &Path) -> Box<dyn UI> {
+        match normalized_path {
+            (0,5) => Box::new(Board::vertical_left()),
+            (1,4) => Box::new(Board::vertical_right()),
+            (3,6) => Box::new(Board::horizontal_hi()),
+            (2,7) => Box::new(Board::horizontal_lo()),
+            _ => Box::new(Line::new((0,0), (0,0)))
+        }
+    }
+
+    fn vertical_left() -> Line {
+        let xo = TILE_SIDE_LENGTH / 3;
+        let yo = 0;
+        let start = (xo, yo);
+        let end = (xo, yo + TILE_SIDE_LENGTH);
+
+        Line::new(start, end ).with_thickness(Board::PATH_THICKNESS)
+    }
+
+    fn vertical_right() -> Line {
+        Board::vertical_left().translate((TILE_SIDE_LENGTH/3, 0))
+    }
+
+    fn horizontal_hi() -> Line {
+        let xo = 0;
+        let yo = TILE_SIDE_LENGTH / 3;
+        let start = (xo, yo);
+        let end = (xo + TILE_SIDE_LENGTH, yo);
+
+        Line::new(start, end ).with_thickness(Board::PATH_THICKNESS)
+    }
+
+    fn horizontal_lo() -> Line {
+        Board::horizontal_hi().translate((0, TILE_SIDE_LENGTH/3))
     }
 
     fn tile_square_at(x: usize, y: usize) -> Rectangle {
-        let position = (x as u32 * TILE_SIDE_LENGTH, y as u32 * TILE_SIDE_LENGTH);
+        let position = Board::coords_to_pixels(x, y);
         let size = (TILE_SIDE_LENGTH, TILE_SIDE_LENGTH);
-        let border_offset = (BOARD_BORDER, BOARD_BORDER);
-        Rectangle::new(position, size).translate(border_offset)
+
+        Rectangle::new(position, size)
+    }
+
+    fn coords_to_pixels(x: usize, y: usize) -> (u32, u32) {
+        (x as u32 * TILE_SIDE_LENGTH + BOARD_BORDER, y as u32 * TILE_SIDE_LENGTH + BOARD_BORDER)
     }
 
 }
