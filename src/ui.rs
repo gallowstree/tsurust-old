@@ -3,6 +3,8 @@ use quicksilver::graphics::{Drawable};
 use std::ops::Deref;
 use crate::model::*;
 use crate::model::Tile;
+use std::borrow::Borrow;
+use arrayvec::ArrayVec;
 
 const SCALE: u32 = 2;
 pub const SCREEN_WIDTH: u32 = 600 * SCALE;
@@ -41,7 +43,7 @@ impl UI for Board {
         let board_rect = Rectangle::new(board_position, board_size);
 
         window.draw(&board_rect, Col(Color::BLACK));
-        //TODO draw grid lines here? or do it in the empty spaces?
+
 
         for (y, row) in self.grid.iter().enumerate() {
             for (x, tile) in row.iter().enumerate() {
@@ -49,49 +51,67 @@ impl UI for Board {
                     Some(tile) => draw_tile(&tile, x, y, window),
                     None => draw_empty_space(x, y, window),
                 }
-
-                get_spawn_coords(x, y)
-                    .iter()
-                    .for_each(|(first, second)| draw_spawns(first, second, y == 0 || y == TILES_PER_ROW - 1 ,window));
-
             }
         }
+
+        self.draw_spawns(window);
+        Board::draw_grid_lines(window);
+
     }
 }
 
-fn draw_spawns(first: &Vector, second: &Vector, vertical: bool, window:&mut Window) {
-    let size = match vertical {
-        true => (THIRD / 4, PATH_THICKNESS as u32 * 2),
-        false => (PATH_THICKNESS as u32 * 2, THIRD / 4)
-    };
+impl Board {
+    fn draw_spawns(&self,  window:&mut Window) {
+        self.spawns.iter().for_each(|spawn|{
+            let &(row, col, i) = spawn;
 
-    window.draw(&Rectangle::new_sized(size).with_center(first.clone()), Col(Color::WHITE));
-    window.draw(&Rectangle::new_sized(size).with_center(second.clone()), Col(Color::WHITE));
-}
+            let is_at_bottom = i == 0 || i == 1;
+            let is_at_top = i == 4 || i == 5;
+            let vertical = is_at_bottom || is_at_top;
+            let is_at_far_right = i == 2 || i == 3;
+            //true means: this is the upmost (when vertical == true) or leftmost (when horizontal == true) spawn inside the tile at row, col
+            let is_first = i == 0 || i == 5 || i == 3 || i == 6;
 
-fn get_spawn_coords(x: usize, y: usize) -> Vec<(Vector, Vector)> {
-    let mut result = Vec::new();
-    if y == 0 {
-        let left = coords_to_vec(x, y) + Vector::new(THIRD, 0);
-        let right = left + Vector::new(THIRD, 0);
-        result.push((left, right));
+            let offset = match (vertical, is_first) {
+                (true, true) => Vector::new(THIRD, 0),
+                (true, false) => Vector::new(2 * THIRD, 0),
+                (false, true) => Vector::new(0, THIRD),
+                (false, false) => Vector::new(0, 2 * THIRD),
+            };
+
+            let edge_offset = match (is_at_bottom, is_at_far_right) {
+                (true, false) => Vector::new(0, TILE_SIDE_LENGTH),
+                (false, true) => Vector::new(TILE_SIDE_LENGTH, 0),
+                _ => Vector::new(0, 0)
+            };
+
+            let size = match vertical {
+                true => (PATH_THICKNESS as f32 * 1.5, THIRD as f32 / 4.0 ),
+                false => (THIRD as f32 / 4.0, PATH_THICKNESS as f32 * 1.5),
+            };
+
+            let center = coords_to_vec(row, col) + offset + edge_offset;
+            let rect = Rectangle::new_sized(size).with_center(center.clone());
+
+            window.draw(&rect, Col(Color::WHITE));
+        });
     }
-    if y == TILES_PER_ROW - 1 {
-        let left = coords_to_vec(x, y) + Vector::new(THIRD, TILE_SIDE_LENGTH);
-        let right = left + Vector::new(THIRD, 0);
-        result.push((left, right));
+
+    fn draw_grid_lines(window:&mut Window) {
+        for x in 0..TILES_PER_ROW {
+            let x = x as u32 * TILE_SIDE_LENGTH;
+            let start = (x , 0);
+            let end = (x, TILE_SIDE_LENGTH * TILES_PER_ROW as u32);
+            let line = Line::new(start, end).translate((BOARD_BORDER as u32, BOARD_BORDER as u32));
+            window.draw(&line, Col(Color::YELLOW));
+
+            let y = x;
+            let start = (0 , y);
+            let end = (TILE_SIDE_LENGTH * TILES_PER_ROW as u32, y);
+            let line = Line::new(start, end).translate((BOARD_BORDER as u32, BOARD_BORDER as u32));
+            window.draw(&line, Col(Color::YELLOW));
+        }
     }
-    if x == 0 {
-        let up = coords_to_vec(x, y) + Vector::new(0, THIRD);
-        let down = up + Vector::new(0, THIRD);
-        result.push((up, down));
-    }
-    if x == TILES_PER_ROW - 1 {
-        let up = coords_to_vec(x, y) + Vector::new(TILE_SIDE_LENGTH, THIRD);
-        let down = up + Vector::new(0, THIRD);
-        result.push((up, down));
-    }
-    result
 }
 
 fn draw_tile(tile: &Tile, x: usize, y: usize, window:&mut Window) -> () {
