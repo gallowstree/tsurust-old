@@ -11,7 +11,7 @@ pub const SCREEN_HEIGHT: u32 = 500 * SCALE;
 const TILE_SIDE_LENGTH: u32 = SCREEN_HEIGHT / 8;
 const BOARD_BORDER: u32 = TILE_SIDE_LENGTH / 2;
 const BOARD_SIDE_LENGTH: u32 = TILE_SIDE_LENGTH * TILES_PER_ROW as u32;
-
+const PATH_THICKNESS : u8 = 4;
 
 pub trait UI {
     fn draw(&self, window:&mut Window) -> ();
@@ -47,13 +47,31 @@ impl UI for Board {
                     Some(tile) => draw_tile(&tile, x, y, window),
                     None => draw_empty_space(x, y, window),
                 }
+
+                if (y == 0 || y == TILES_PER_ROW) || (x == 0 || x == TILES_PER_ROW) {
+                    draw_spawns(x, y, window);
+                }
             }
         }
     }
 }
 
+fn draw_spawns(x: usize, y: usize, window:&mut Window) {
+    let third = TILE_SIDE_LENGTH / 3;
 
-const PATH_THICKNESS : u8 = 4;
+    if y == 0 {
+        let start = coords_to_vec(x, y) + Vector::new(third, third/6);
+        let end = start +  Vector::new(0, -(TILE_SIDE_LENGTH as f32/12f32));
+
+        window.draw(&Line::new(start, end).with_thickness(6), Col(Color::WHITE));
+
+        let start = start + Vector::new(third, 0);
+        let end = start +  Vector::new(0, -(TILE_SIDE_LENGTH as f32/12f32));
+
+        window.draw(&Line::new(start, end).with_thickness(6), Col(Color::WHITE));
+    }
+
+}
 
 fn draw_tile(tile: &Tile, x: usize, y: usize, window:&mut Window) -> () {
     let rect = tile_square_at(x, y);
@@ -136,5 +154,9 @@ fn tile_square_at(x: usize, y: usize) -> Rectangle {
 
 fn coords_to_pixels(x: usize, y: usize) -> (u32, u32) {
     (x as u32 * TILE_SIDE_LENGTH + BOARD_BORDER, y as u32 * TILE_SIDE_LENGTH + BOARD_BORDER)
+}
+
+fn coords_to_vec(x: usize, y: usize) -> Vector {
+    Vector::new(x as u32 * TILE_SIDE_LENGTH + BOARD_BORDER, y as u32 * TILE_SIDE_LENGTH + BOARD_BORDER)
 }
 
