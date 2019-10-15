@@ -12,6 +12,8 @@ const TILE_SIDE_LENGTH: u32 = SCREEN_HEIGHT / 8;
 const BOARD_BORDER: u32 = TILE_SIDE_LENGTH / 2;
 const BOARD_SIDE_LENGTH: u32 = TILE_SIDE_LENGTH * TILES_PER_ROW as u32;
 const PATH_THICKNESS : u8 = 4;
+const THIRD : u32 = TILE_SIDE_LENGTH / 3;
+
 
 pub trait UI {
     fn draw(&self, window:&mut Window) -> ();
@@ -48,29 +50,48 @@ impl UI for Board {
                     None => draw_empty_space(x, y, window),
                 }
 
-                if (y == 0 || y == TILES_PER_ROW) || (x == 0 || x == TILES_PER_ROW) {
-                    draw_spawns(x, y, window);
-                }
+                get_spawn_coords(x, y)
+                    .iter()
+                    .for_each(|(first, second)| draw_spawns(first, second, y == 0 || y == TILES_PER_ROW - 1 ,window));
+
             }
         }
     }
 }
 
-fn draw_spawns(x: usize, y: usize, window:&mut Window) {
-    let third = TILE_SIDE_LENGTH / 3;
+fn draw_spawns(first: &Vector, second: &Vector, vertical: bool, window:&mut Window) {
+    let size = match vertical {
+        true => (THIRD / 4, PATH_THICKNESS as u32 * 2),
+        false => (PATH_THICKNESS as u32 * 2, THIRD / 4)
+    };
 
+    window.draw(&Rectangle::new_sized(size).with_center(first.clone()), Col(Color::WHITE));
+    window.draw(&Rectangle::new_sized(size).with_center(second.clone()), Col(Color::WHITE));
+}
+
+fn get_spawn_coords(x: usize, y: usize) -> Vec<(Vector, Vector)> {
+    let mut result = Vec::new();
     if y == 0 {
-        let start = coords_to_vec(x, y) + Vector::new(third, third/6);
-        let end = start +  Vector::new(0, -(TILE_SIDE_LENGTH as f32/12f32));
-
-        window.draw(&Line::new(start, end).with_thickness(6), Col(Color::WHITE));
-
-        let start = start + Vector::new(third, 0);
-        let end = start +  Vector::new(0, -(TILE_SIDE_LENGTH as f32/12f32));
-
-        window.draw(&Line::new(start, end).with_thickness(6), Col(Color::WHITE));
+        let left = coords_to_vec(x, y) + Vector::new(THIRD, 0);
+        let right = left + Vector::new(THIRD, 0);
+        result.push((left, right));
     }
-
+    if y == TILES_PER_ROW - 1 {
+        let left = coords_to_vec(x, y) + Vector::new(THIRD, TILE_SIDE_LENGTH);
+        let right = left + Vector::new(THIRD, 0);
+        result.push((left, right));
+    }
+    if x == 0 {
+        let up = coords_to_vec(x, y) + Vector::new(0, THIRD);
+        let down = up + Vector::new(0, THIRD);
+        result.push((up, down));
+    }
+    if x == TILES_PER_ROW - 1 {
+        let up = coords_to_vec(x, y) + Vector::new(TILE_SIDE_LENGTH, THIRD);
+        let down = up + Vector::new(0, THIRD);
+        result.push((up, down));
+    }
+    result
 }
 
 fn draw_tile(tile: &Tile, x: usize, y: usize, window:&mut Window) -> () {

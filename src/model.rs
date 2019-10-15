@@ -9,11 +9,14 @@ use arrayvec::ArrayVec;
 use std::ops::Deref;
 
 pub const TILES_PER_ROW: usize = 6;
+const SPAWN_COUNT : usize = TILES_PER_ROW * 2 * 4;
 
 pub type Path = (u8, u8);
+pub type Position = (u8, u8, u8); // row, column, path_index
 
 pub struct Board {
     pub grid: [[Option<Tile> ; TILES_PER_ROW] ; TILES_PER_ROW],
+    pub spawns: ArrayVec<[Position; SPAWN_COUNT]>
 }
 
 #[derive(Debug)]
@@ -38,15 +41,43 @@ pub enum Rotation {
     _270,
 }
 
+impl Default for Board {
+    fn default() -> Board {
+        Board {
+            grid: [ [None; TILES_PER_ROW] ; TILES_PER_ROW],
+            spawns: Board::make_spawns()
+        }
+    }
+}
+
 impl Board {
     pub fn place_tile(&mut self, row: usize, col: usize, tile: Tile) -> () {
         self.grid[row][col] = Some(tile);
     }
-}
 
-impl Default for Board {
-    fn default() -> Board {
-        Board {grid: [ [None; TILES_PER_ROW] ; TILES_PER_ROW]}
+    fn make_spawns() -> ArrayVec<[Position; SPAWN_COUNT]> {
+        let mut result: ArrayVec<[Position; SPAWN_COUNT]> = ArrayVec::new();
+        let max = TILES_PER_ROW as u8 - 1;
+
+        for x in 0..TILES_PER_ROW {
+            let x = x as u8;
+            result.push((x, 0, 4));
+            result.push((x, 0, 5));
+
+            result.push((x, max, 0));
+            result.push((x, max, 1));
+        }
+
+        for y in 0..TILES_PER_ROW {
+            let y = y as u8;
+            result.push((0, y, 6));
+            result.push((0, y, 7));
+
+            result.push((max, y, 0));
+            result.push((max, y, 1));
+        }
+
+        result
     }
 }
 
