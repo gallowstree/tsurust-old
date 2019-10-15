@@ -44,7 +44,6 @@ impl UI for Board {
 
         window.draw(&board_rect, Col(Color::BLACK));
 
-
         for (y, row) in self.grid.iter().enumerate() {
             for (x, tile) in row.iter().enumerate() {
                 match tile {
@@ -56,7 +55,6 @@ impl UI for Board {
 
         self.draw_spawns(window);
         Board::draw_grid_lines(window);
-
     }
 }
 
@@ -117,7 +115,7 @@ impl Board {
 fn draw_tile(tile: &Tile, x: usize, y: usize, window:&mut Window) -> () {
     let rect = tile_square_at(x, y);
 
-    window.draw(&rect, Col(Color::BLACK));
+    window.draw(&rect, Col(Color::from_rgba(121, 35, 20, 1.0)));
 
     if let Tile::PathTile { paths, rotation } = tile {
         draw_paths(paths, rotation, x, y, window)
@@ -126,7 +124,7 @@ fn draw_tile(tile: &Tile, x: usize, y: usize, window:&mut Window) -> () {
 
 fn draw_empty_space(x: usize, y: usize, window:&mut Window) -> () {
     let rect = tile_square_at(x, y);
-    let bkg_col = Col(Color::from_rgba(127, 127, 127, 1.0));
+    let bkg_col = Col(Color::BLACK);
 
     window.draw(&rect, bkg_col);
 }
