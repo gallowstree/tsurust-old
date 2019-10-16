@@ -15,7 +15,8 @@ impl State for Game {
         let mut board = Board::default();
 
         let normalized_pound_sign_tile = PathTile {paths: [(0,5), (1,4), (2,7), (3,6)], rotation: Rotation::_0};
-        board.place_tile(1,2, normalized_pound_sign_tile);
+        let d_tile = PathTile {paths: [(6,7), (1,4), (2,3), (0,5)], rotation: Rotation::_0};
+        board.place_tile(1,2, d_tile);
         board.place_tile(0,0, normalized_pound_sign_tile);
         board.place_tile(1,1, normalized_pound_sign_tile);
 

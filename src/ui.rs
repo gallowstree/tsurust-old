@@ -1,10 +1,11 @@
 use quicksilver::prelude::*;
-use quicksilver::graphics::{Drawable};
+use quicksilver::graphics::{Drawable, Mesh};
 use std::ops::Deref;
 use crate::model::*;
 use crate::model::Tile;
 use std::borrow::Borrow;
 use arrayvec::ArrayVec;
+use std::f32::consts::PI;
 
 const SCALE: u32 = 2;
 pub const SCREEN_WIDTH: u32 = 600 * SCALE;
@@ -15,7 +16,6 @@ const BOARD_BORDER: u32 = TILE_SIDE_LENGTH / 2;
 const BOARD_SIDE_LENGTH: u32 = TILE_SIDE_LENGTH * TILES_PER_ROW as u32;
 const PATH_THICKNESS : u8 = 4;
 const THIRD : u32 = TILE_SIDE_LENGTH / 3;
-
 
 pub trait UI {
     fn draw(&self, window:&mut Window) -> ();
@@ -150,10 +150,16 @@ fn draw_paths(paths:&[Path; 4], rotation: &Rotation, x: usize, y: usize, window:
 
 fn get_path_drawable(normalized_path: &Path) -> Box<dyn UI> {
     match normalized_path {
+        // straight
         (0,5) => Box::new(vertical_left()),
         (1,4) => Box::new(vertical_right()),
         (3,6) => Box::new(horizontal_hi()),
         (2,7) => Box::new(horizontal_lo()),
+        // c,u,n,D -like
+        (0,1) => Box::new(DnucShape::N),
+        (2,3) => Box::new(DnucShape::C),
+        (4,5) => Box::new(DnucShape::U),
+        (6,7) => Box::new(DnucShape::D),
         _ => Box::new(Line::new((0,0), (0,0)))
     }
 }
@@ -199,3 +205,48 @@ fn coords_to_vec(x: usize, y: usize) -> Vector {
     Vector::new(x as u32 * TILE_SIDE_LENGTH + BOARD_BORDER, y as u32 * TILE_SIDE_LENGTH + BOARD_BORDER)
 }
 
+enum DnucShape {
+    D,
+    C,
+    U,
+    N, //n
+}
+
+impl UI for DnucShape {
+    fn draw(&self, window: &mut Window) -> () {
+        window.draw(self, Col(Color::BLACK));
+    }
+
+    fn draw_ex(&self, window: &mut Window, trans: Transform, col: Color) {
+        window.draw_ex(self, Col(col), trans, 1);
+    }
+}
+
+impl Drawable for DnucShape {
+    fn draw<'a>(&self, mesh: &mut Mesh, background: Background<'a>, transform: Transform, z: impl Scalar) {
+        match self {
+            D => {
+                let from = (0 - 2, THIRD - 2);
+                let to = (THIRD / 2 + 2, 1.5 * THIRD as f32 + 2.0);
+                let line: impl Drawable = Line::new(from, to).with_thickness(PATH_THICKNESS);
+
+                line.draw(mesh, background, transform, z);
+
+                let from = to;
+                let to = (0, 2 * THIRD + 2);
+                let line: impl Drawable = Line::new(from, to).with_thickness(PATH_THICKNESS);
+                line.draw(mesh, background, transform, z);
+            },
+            U => draw_u(),
+            N => draw_n(),
+            C => draw_c(),
+        }
+
+        fn draw_d() {
+
+        }
+        fn draw_u() {}
+        fn draw_n() {}
+        fn draw_c() {}
+    }
+}
