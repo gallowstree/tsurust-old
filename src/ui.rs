@@ -224,29 +224,26 @@ impl UI for DnucShape {
 
 impl Drawable for DnucShape {
     fn draw<'a>(&self, mesh: &mut Mesh, background: Background<'a>, transform: Transform, z: impl Scalar) {
+
+
         match self {
-            D => {
-                let from = (0 - 2, THIRD - 2);
-                let to = (THIRD / 2 + 2, 1.5 * THIRD as f32 + 2.0);
-                let line: impl Drawable = Line::new(from, to).with_thickness(PATH_THICKNESS);
-
-                line.draw(mesh, background, transform, z);
-
-                let from = to;
-                let to = (0, 2 * THIRD + 2);
-                let line: impl Drawable = Line::new(from, to).with_thickness(PATH_THICKNESS);
-                line.draw(mesh, background, transform, z);
-            },
-            U => draw_u(),
-            N => draw_n(),
-            C => draw_c(),
+            D => draw_d(mesh, background, transform, z),
+            U => draw_d(mesh, background, Transform::rotate(90) * Transform::translate((TILE_SIDE_LENGTH / 4, TILE_SIDE_LENGTH/3)), z),
+            N => draw_d(mesh, background, Transform::rotate(-90), z),
+            C => draw_d(mesh, background, Transform::rotate(180), z),
         }
 
-        fn draw_d() {
+        fn draw_d(mesh: &mut Mesh, background: Background, transform: Transform, z: impl Scalar) {
+            let from = (0 - 2, THIRD - 2);
+            let to = (THIRD / 2 + 2, 1.5 * THIRD as f32 + 2.0);
+            let line: impl Drawable = Line::new(from, to).with_thickness(PATH_THICKNESS);
 
-        }
-        fn draw_u() {}
-        fn draw_n() {}
-        fn draw_c() {}
+            line.draw(mesh, background, transform, z);
+
+            let from = to;
+            let to = (0, 2 * THIRD + 2);
+            let line: impl Drawable = Line::new(from, to).with_thickness(PATH_THICKNESS);
+            line.draw(mesh, background, transform, z);
+        };
     }
 }
