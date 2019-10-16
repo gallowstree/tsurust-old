@@ -97,7 +97,6 @@ impl Deck {
         let tiles: Result<Vec<Tile>, _> = tiles_as_text?
             .iter()
             .map(|tile_text| Deck::parse_tile(tile_text))
-            .inspect(|tile| println!("{:?}", tile))
             .collect();
 
         let mut tiles = tiles?;

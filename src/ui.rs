@@ -66,8 +66,7 @@ impl Board {
             let is_at_bottom = i == 0 || i == 1;
             let is_at_top = i == 4 || i == 5;
             let vertical = is_at_bottom || is_at_top;
-            //true means: this is the upmost (when vertical == true) or leftmost (when horizontal == true) spawn inside the tile at (row, col)
-            let is_first = i == 0 || i == 5 || i == 3 || i == 6;
+            let is_first = i == 0 || i == 5 || i == 3 || i == 6; //is this the topmost (when vertical) or leftmost (when horizontal, i.e. !vertical) spawn inside the tile at (row, col)
 
             let offset = match (vertical, is_first) {
                 (true, true) => Vector::new(THIRD, 0),
