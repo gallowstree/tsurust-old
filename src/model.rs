@@ -6,7 +6,6 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::result::Result;
 use arrayvec::ArrayVec;
-use std::ops::Deref;
 
 pub const TILES_PER_ROW: usize = 6;
 pub const SPAWN_COUNT : usize = TILES_PER_ROW * 2 * 4;
@@ -104,8 +103,28 @@ impl Deck {
         let mut rng = thread_rng();
         tiles.shuffle(&mut rng);
         tiles.push(Tile::DragonTile);
-
+        //Deck::debug_normalized_paths(&tiles);
         Ok(Deck { tiles })
+    }
+
+    fn debug_normalized_paths(tiles: &Vec<Tile>) {
+
+        tiles.iter().flat_map(|t|
+            if let Tile::PathTile { paths, rotation } = t {
+                paths.to_vec()
+            } else {
+                vec![]
+            }
+        ).map(|p| norm(&p))
+            .unique()
+            .for_each(|p| println!("{:?}", p));
+
+        fn norm(path: &Path) -> Path {
+            let (from, to) = path;
+            let new_from = from % 2;
+            let new_to = new_from + (to - from);
+            (new_from, new_to)
+        }
     }
 
     fn parse_tile(tile_text: &str) -> Result<Tile, String> {
