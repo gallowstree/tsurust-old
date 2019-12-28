@@ -1,11 +1,8 @@
 use quicksilver::prelude::*;
 use quicksilver::graphics::{Drawable, Mesh};
-use std::ops::Deref;
+use std::ops::{Deref, Neg};
 use crate::model::*;
 use crate::model::Tile;
-use std::borrow::Borrow;
-use arrayvec::ArrayVec;
-use std::f32::consts::PI;
 
 const SCALE: u32 = 2;
 pub const SCREEN_WIDTH: u32 = 600 * SCALE;
@@ -14,8 +11,10 @@ pub const SCREEN_HEIGHT: u32 = 500 * SCALE;
 const TILE_SIDE_LENGTH: u32 = SCREEN_HEIGHT / 8;
 const BOARD_BORDER: u32 = TILE_SIDE_LENGTH / 2;
 const BOARD_SIDE_LENGTH: u32 = TILE_SIDE_LENGTH * TILES_PER_ROW as u32;
+const PATH_EDGE_SEGMENT_LENGTH: u32 = TILE_SIDE_LENGTH / 6;
 const PATH_THICKNESS : u8 = 4;
 const THIRD : u32 = TILE_SIDE_LENGTH / 3;
+const HALF : u32 = TILE_SIDE_LENGTH / 2;
 
 pub trait UI {
     fn draw(&self, window:&mut Window) -> ();
@@ -58,6 +57,70 @@ impl UI for Board {
     }
 }
 
+fn draw_tile(tile: &Tile, x: usize, y: usize, window:&mut Window) -> () {
+    let rect = tile_square_at(x, y);
+
+    window.draw(&rect, Col(Color::from_rgba(121, 35, 20, 1.0)));
+
+    if let Tile::PathTile { paths, rotation } = tile {
+        draw_paths(paths, rotation, x, y, window)
+    }
+}
+
+fn draw_empty_space(x: usize, y: usize, window:&mut Window) -> () {
+    window.draw(&tile_square_at(x, y), Col(Color::BLACK));
+}
+
+
+
+fn draw_paths(paths:&[Path; 4], rotation: &Rotation, x: usize, y: usize, window: &mut Window) {
+    paths.iter()
+        .map(|path| rotation.apply(path))
+        .for_each(|(from, to)| {
+            let offset = coords_to_pixels(x, y);
+            let transform = Transform::translate(offset);
+
+            let start_segment = path_edge_segment(from);
+            let end_segment = path_edge_segment(to);
+            let middle_segment = Line::new(start_segment.b, end_segment.b);
+
+            window.draw_ex(&start_segment.with_thickness(PATH_THICKNESS), Col(Color::WHITE), transform, 1);
+            window.draw_ex(&end_segment.with_thickness(PATH_THICKNESS), Col(Color::WHITE), transform, 1);
+            window.draw_ex(&middle_segment.with_thickness(PATH_THICKNESS), Col(Color::WHITE), transform, 1);
+        });
+}
+
+fn path_edge_segment(index: PathIndex) -> Line {
+    let (start, end) = match index {
+        0 => ((THIRD, TILE_SIDE_LENGTH), (THIRD, TILE_SIDE_LENGTH - PATH_EDGE_SEGMENT_LENGTH)),
+        1 => ((2 * THIRD, TILE_SIDE_LENGTH), (2 * THIRD, TILE_SIDE_LENGTH - PATH_EDGE_SEGMENT_LENGTH)),
+        2 => ((TILE_SIDE_LENGTH, 2 * THIRD), (TILE_SIDE_LENGTH - PATH_EDGE_SEGMENT_LENGTH, 2 * THIRD)),
+        3 => ((TILE_SIDE_LENGTH, THIRD), (TILE_SIDE_LENGTH - PATH_EDGE_SEGMENT_LENGTH, THIRD)),
+        4 => ((2 * THIRD, 0), (2 * THIRD, PATH_EDGE_SEGMENT_LENGTH)),
+        5 => ((THIRD, 0), (THIRD, PATH_EDGE_SEGMENT_LENGTH)),
+        6 => ((0, THIRD), (PATH_EDGE_SEGMENT_LENGTH, THIRD)),
+        7 => ((0, 2 * THIRD), (PATH_EDGE_SEGMENT_LENGTH, 2 * THIRD)),
+        _ => panic!("wtf dude?")
+    };
+
+    Line::new(start, end)
+}
+
+fn tile_square_at(x: usize, y: usize) -> Rectangle {
+    let position = coords_to_pixels(x, y);
+    let size = (TILE_SIDE_LENGTH, TILE_SIDE_LENGTH);
+
+    Rectangle::new(position, size)
+}
+
+fn coords_to_pixels(x: usize, y: usize) -> (u32, u32) {
+    (x as u32 * TILE_SIDE_LENGTH + BOARD_BORDER, y as u32 * TILE_SIDE_LENGTH + BOARD_BORDER)
+}
+
+fn coords_to_vec(x: usize, y: usize) -> Vector {
+    Vector::new(x as u32 * TILE_SIDE_LENGTH + BOARD_BORDER, y as u32 * TILE_SIDE_LENGTH + BOARD_BORDER)
+}
+
 impl Board {
     fn draw_spawns(&self,  window:&mut Window) {
         self.spawns.iter().for_each(|spawn|{
@@ -95,157 +158,18 @@ impl Board {
     }
 
     fn draw_grid_lines(window:&mut Window) {
-        for x in 0..TILES_PER_ROW {
+        for x in 0..=TILES_PER_ROW {
             let x = x as u32 * TILE_SIDE_LENGTH;
             let start = (x , 0);
-            let end = (x, TILE_SIDE_LENGTH * TILES_PER_ROW as u32);
+            let end = (x, BOARD_SIDE_LENGTH);
             let line = Line::new(start, end).translate((BOARD_BORDER as u32, BOARD_BORDER as u32));
             window.draw(&line, Col(Color::YELLOW));
 
             let y = x;
             let start = (0 , y);
-            let end = (TILE_SIDE_LENGTH * TILES_PER_ROW as u32, y);
+            let end = (BOARD_SIDE_LENGTH, y);
             let line = Line::new(start, end).translate((BOARD_BORDER as u32, BOARD_BORDER as u32));
             window.draw(&line, Col(Color::YELLOW));
         }
-    }
-}
-
-fn draw_tile(tile: &Tile, x: usize, y: usize, window:&mut Window) -> () {
-    let rect = tile_square_at(x, y);
-
-    window.draw(&rect, Col(Color::from_rgba(121, 35, 20, 1.0)));
-
-    if let Tile::PathTile { paths, rotation } = tile {
-        draw_paths(paths, rotation, x, y, window)
-    }
-}
-
-fn draw_empty_space(x: usize, y: usize, window:&mut Window) -> () {
-    let rect = tile_square_at(x, y);
-    let bkg_col = Col(Color::BLACK);
-
-    window.draw(&rect, bkg_col);
-}
-
-fn normalize_path(path: &Path) -> Path {
-    let (from, to) = path;
-    let new_from = from % 2;
-    let new_to = new_from + (to - from);
-    (new_from, new_to)
-}
-
-fn draw_paths(paths:&[Path; 4], rotation: &Rotation, x: usize, y: usize, window: &mut Window) {
-    paths.iter()
-        .map(|path| (normalize_path(path), path))
-        .for_each(|(original_path, normalized_path)| {
-            let offset = coords_to_pixels(x, y);
-            let transform = Transform::translate(offset);
-            let path_drawable = get_path_drawable(normalized_path);
-
-            path_drawable.deref().draw_ex(window, transform, Color::WHITE);
-        });
-}
-
-fn get_path_drawable(normalized_path: &Path) -> Box<dyn UI> {
-    match normalized_path {
-        // straight
-        (0,5) => Box::new(vertical_left()),
-        (1,4) => Box::new(vertical_right()),
-        (3,6) => Box::new(horizontal_hi()),
-        (2,7) => Box::new(horizontal_lo()),
-        // c,u,n,D -like
-        (0,1) => Box::new(DnucShape::N),
-        (2,3) => Box::new(DnucShape::C),
-        (4,5) => Box::new(DnucShape::U),
-        (6,7) => Box::new(DnucShape::D),
-        _ => Box::new(Line::new((0,0), (0,0)))
-    }
-}
-
-fn vertical_left() -> Line {
-    let xo = TILE_SIDE_LENGTH / 3;
-    let yo = 0;
-    let start = (xo, yo);
-    let end = (xo, yo + TILE_SIDE_LENGTH);
-
-    Line::new(start, end ).with_thickness(PATH_THICKNESS)
-}
-
-fn vertical_right() -> Line {
-    vertical_left().translate((TILE_SIDE_LENGTH/3, 0))
-}
-
-fn horizontal_hi() -> Line {
-    let xo = 0;
-    let yo = TILE_SIDE_LENGTH / 3;
-    let start = (xo, yo);
-    let end = (xo + TILE_SIDE_LENGTH, yo);
-
-    Line::new(start, end ).with_thickness(PATH_THICKNESS)
-}
-
-fn horizontal_lo() -> Line {
-    horizontal_hi().translate((0, TILE_SIDE_LENGTH/3))
-}
-
-fn tile_square_at(x: usize, y: usize) -> Rectangle {
-    let position = coords_to_pixels(x, y);
-    let size = (TILE_SIDE_LENGTH, TILE_SIDE_LENGTH);
-
-    Rectangle::new(position, size)
-}
-
-fn coords_to_pixels(x: usize, y: usize) -> (u32, u32) {
-    (x as u32 * TILE_SIDE_LENGTH + BOARD_BORDER, y as u32 * TILE_SIDE_LENGTH + BOARD_BORDER)
-}
-
-fn coords_to_vec(x: usize, y: usize) -> Vector {
-    Vector::new(x as u32 * TILE_SIDE_LENGTH + BOARD_BORDER, y as u32 * TILE_SIDE_LENGTH + BOARD_BORDER)
-}
-
-enum DnucShape {
-    D,
-    C,
-    U,
-    N, //n
-}
-
-impl UI for DnucShape {
-    fn draw(&self, window: &mut Window) -> () {
-        window.draw(self, Col(Color::BLACK));
-    }
-
-    fn draw_ex(&self, window: &mut Window, trans: Transform, col: Color) {
-        window.draw_ex(self, Col(col), trans, 1);
-    }
-}
-
-impl Drawable for DnucShape {
-    fn draw<'a>(&self, mesh: &mut Mesh, background: Background<'a>, transform: Transform, z: impl Scalar) {
-        match self {
-            D => {
-                let from = (0 - 2, THIRD - 2);
-                let to = (THIRD / 2 + 2, 1.5 * THIRD as f32 + 2.0);
-                let line: impl Drawable = Line::new(from, to).with_thickness(PATH_THICKNESS);
-
-                line.draw(mesh, background, transform, z);
-
-                let from = to;
-                let to = (0, 2 * THIRD + 2);
-                let line: impl Drawable = Line::new(from, to).with_thickness(PATH_THICKNESS);
-                line.draw(mesh, background, transform, z);
-            },
-            U => draw_u(),
-            N => draw_n(),
-            C => draw_c(),
-        }
-
-        fn draw_d() {
-
-        }
-        fn draw_u() {}
-        fn draw_n() {}
-        fn draw_c() {}
     }
 }

@@ -6,12 +6,12 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::result::Result;
 use arrayvec::ArrayVec;
-use std::ops::Deref;
 
 pub const TILES_PER_ROW: usize = 6;
 pub const SPAWN_COUNT : usize = TILES_PER_ROW * 2 * 4;
 
-pub type Path = (u8, u8);
+pub type PathIndex = u8;
+pub type Path = (PathIndex, PathIndex);
 pub type Position = (usize, usize, usize); // row, column, path_index
 
 pub struct Board {
@@ -80,6 +80,20 @@ impl Board {
     }
 }
 
+impl Rotation {
+    pub fn apply(&self, (from, to): &Path) -> Path {
+        let offset = match *self {
+            Rotation::_0   => 0,
+            Rotation::_90  => 2,
+            Rotation::_180 => 4,
+            Rotation::_270 => 6
+        };
+
+        let (new_from, new_to) = (from + offset, to + offset);
+        (new_from % 8, new_to % 8)
+    }
+}
+
 impl Deck {
     pub fn pop_tile(&mut self) -> Option<Tile> {
         self.tiles.pop()
@@ -103,7 +117,7 @@ impl Deck {
 
         let mut rng = thread_rng();
         tiles.shuffle(&mut rng);
-        tiles.push(Tile::DragonTile);
+        tiles.insert(0, Tile::DragonTile);
 
         Ok(Deck { tiles })
     }
