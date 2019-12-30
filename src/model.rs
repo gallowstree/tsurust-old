@@ -10,13 +10,26 @@ use arrayvec::ArrayVec;
 pub const TILES_PER_ROW: usize = 6;
 pub const SPAWN_COUNT : usize = TILES_PER_ROW * 2 * 4;
 
+/* A tile has 8 path indices, when rotation = 0:
+# 5 ## 4 #
+6        3
+#        #
+7        2
+# 0 ## 1 #
+*/
 pub type PathIndex = u8;
-pub type Path = (PathIndex, PathIndex);
-pub type Position = (usize, usize, usize); // row, column, path_index
+pub type Path = (PathIndex, PathIndex); // (from, to)
+pub type Position = (usize, usize, usize); // (row, column, path_index)
+
+pub struct Game {
+    deck: Deck,
+    pub board: Board,
+}
 
 pub struct Board {
     pub grid: [[Option<Tile> ; TILES_PER_ROW] ; TILES_PER_ROW],
-    pub spawns: ArrayVec<[Position; SPAWN_COUNT]>
+    pub spawns: ArrayVec<[Position; SPAWN_COUNT]>,
+    pub players: Vec<Avatar>
 }
 
 #[derive(Debug)]
@@ -39,6 +52,11 @@ pub enum Rotation {
     _90,
     _180,
     _270,
+}
+
+pub struct Avatar {
+    color_hex:String,
+    position: Position
 }
 
 impl Default for Board {
@@ -69,7 +87,8 @@ impl Default for Board {
 
         Board {
             grid: [ [None; TILES_PER_ROW] ; TILES_PER_ROW],
-            spawns: make_spawns()
+            spawns: make_spawns(),
+            players: Vec::new()
         }
     }
 }

@@ -1,12 +1,6 @@
 use tsurust::model::*;
 use quicksilver::prelude::*;
-use tsurust::model::Tile::PathTile;
 use tsurust::ui::{SCREEN_WIDTH, SCREEN_HEIGHT};
-
-struct Game {
-    deck: Deck,
-    board: Board,
-}
 
 impl State for Game {
 
