@@ -16,9 +16,22 @@ impl State for Game {
         players.insert(PlayerColor::ORANGE, Stone {color: PlayerColor::ORANGE, position: (0,0,7)});
         players.insert(PlayerColor::GREEN, Stone {color: PlayerColor::GREEN, position: (0,0,4)});
         players.insert(PlayerColor::RED, Stone {color: PlayerColor::RED, position: (5,5,3)});
+        players.insert(PlayerColor::YELLOW, Stone {color: PlayerColor::YELLOW, position: (5,0,0)});
+        players.insert(PlayerColor::BLUE, Stone {color: PlayerColor::BLUE, position: (0,3,4)});
+        players.insert(PlayerColor::GRAY, Stone {color: PlayerColor::GRAY, position: (3,0,6)});
+        players.insert(PlayerColor::BLACK, Stone {color: PlayerColor::BLACK, position: (4,5,2)});
+        players.insert(PlayerColor::WHITE, Stone {color: PlayerColor::WHITE, position: (2,0,6)});
 
         let mut board = Board::with_players(players);
 
+/*
+        for row in 0..TILES_PER_ROW {
+            for col in 0..TILES_PER_ROW {
+                deck.pop_tile()
+                    .map(|tile| board.place_tile(row, col, tile));
+            }
+        }
+*/
 
         Ok(Self {deck, board})
     }

@@ -23,6 +23,7 @@ const PATH_THICKNESS : u8 = 4;
 const PATH_EDGE_SEGMENT_LENGTH: u32 = TILE_SIDE_LENGTH / 6;
 
 const STONE_RADIUS: u32 = (PATH_EDGE_SEGMENT_LENGTH as f32 * 0.75) as u32;
+const STONE_BORDER: u32 = 2;
 
 impl Board {
     pub fn draw(&self, window:&mut Window) -> () {
@@ -95,9 +96,9 @@ fn draw_paths(paths:&[Path; 4], rotation: &Rotation, x: usize, y: usize, window:
             let offset = coords_to_pixels(x, y);
             let transform = Transform::translate(offset);
 
-            window.draw_ex(&start_segment.with_thickness(PATH_THICKNESS), Col(Color::WHITE), transform, 1);
-            window.draw_ex(&middle_segment.with_thickness(PATH_THICKNESS), Col(Color::WHITE), transform, 1);
-            window.draw_ex(&end_segment.with_thickness(PATH_THICKNESS), Col(Color::WHITE), transform, 1);
+            window.draw_ex(&start_segment.with_thickness(PATH_THICKNESS), Col(Color::WHITE.with_alpha(0.75)), transform, 1);
+            window.draw_ex(&middle_segment.with_thickness(PATH_THICKNESS), Col(Color::WHITE.with_alpha(0.75)), transform, 1);
+            window.draw_ex(&end_segment.with_thickness(PATH_THICKNESS), Col(Color::WHITE.with_alpha(0.75)), transform, 1);
         });
 }
 
@@ -121,8 +122,18 @@ fn draw_stones(stones: &HashMap<PlayerColor, Stone>, window: &mut Window) {
     stones.values().for_each(|stone| {
         let center = to_pixels(stone.position);
         let circle = Circle::new(center, STONE_RADIUS);
+        let border = Circle::new(center, STONE_RADIUS + STONE_BORDER);
+        let color = stone.color.to_color();
 
-        window.draw_ex(&circle, Col(stone.color.to_color()), Transform::IDENTITY, 2);
+        window.draw_ex(&circle, Col(color), Transform::IDENTITY, 3);
+
+        let border_color = if 255.0 * (color.r * 0.299 + color.g * 0.587 + color.b * 0.114) > 149.0 {
+            Color::BLACK
+        } else {
+            Color::WHITE
+        }.with_alpha(0.5);
+
+        window.draw_ex(&border, Col(border_color), Transform::IDENTITY, 2);
     })
 }
 
@@ -172,7 +183,7 @@ fn coords_to_vec(x: usize, y: usize) -> Vector {
 }
 
 fn to_pixels((row, col, index): Position) -> (u32, u32) {
-    let (x, y) = coords_to_pixels(row, col);
+    let (x, y) = coords_to_pixels(col, row);
     let (offset_x, offset_y) = path_index_position(index as PathIndex);
     (x + offset_x, y + offset_y)
 }
