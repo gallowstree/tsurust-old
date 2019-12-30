@@ -6,6 +6,7 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::result::Result;
 use arrayvec::ArrayVec;
+use std::collections::HashMap;
 
 pub const TILES_PER_ROW: usize = 6;
 pub const SPAWN_COUNT : usize = TILES_PER_ROW * 2 * 4;
@@ -21,15 +22,22 @@ pub type PathIndex = u8;
 pub type Path = (PathIndex, PathIndex); // (from, to)
 pub type Position = (usize, usize, usize); // (row, column, path_index)
 
-pub struct Game {
+pub struct Tsurust {
     deck: Deck,
     pub board: Board,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum PlayerColor {
+    WHITE, RED, YELLOW,
+    BLUE, GRAY, ORANGE,
+    GREEN, BLACK
 }
 
 pub struct Board {
     pub grid: [[Option<Tile> ; TILES_PER_ROW] ; TILES_PER_ROW],
     pub spawns: ArrayVec<[Position; SPAWN_COUNT]>,
-    pub players: Vec<Avatar>
+    pub stones: HashMap<PlayerColor, Stone>
 }
 
 #[derive(Debug)]
@@ -54,49 +62,56 @@ pub enum Rotation {
     _270,
 }
 
-pub struct Avatar {
-    color_hex:String,
-    position: Position
+pub struct Stone {
+    pub color:PlayerColor,
+    pub position: Position
 }
 
 impl Default for Board {
     fn default() -> Board {
-
-        fn make_spawns() -> ArrayVec<[Position; SPAWN_COUNT]> {
-            let mut result: ArrayVec<[Position; SPAWN_COUNT]> = ArrayVec::new();
-            let max = TILES_PER_ROW - 1;
-
-            for x in 0..TILES_PER_ROW {
-                result.push((x, 0, 4));
-                result.push((x, 0, 5));
-
-                result.push((x, max, 0));
-                result.push((x, max, 1));
-            }
-
-            for y in 0..TILES_PER_ROW {
-                result.push((0, y, 6));
-                result.push((0, y, 7));
-
-                result.push((max, y, 2));
-                result.push((max, y, 3));
-            }
-
-            result
-        };
-
         Board {
             grid: [ [None; TILES_PER_ROW] ; TILES_PER_ROW],
             spawns: make_spawns(),
-            players: Vec::new()
+            stones: HashMap::new()
         }
     }
 }
 
 impl Board {
+    pub fn with_players(players: HashMap<PlayerColor, Stone>) -> Board {
+        Board {
+            grid: [ [None; TILES_PER_ROW] ; TILES_PER_ROW],
+            spawns: make_spawns(),
+            stones: players
+        }
+    }
+
     pub fn place_tile(&mut self, row: usize, col: usize, tile: Tile) -> () {
         self.grid[row][col] = Some(tile);
     }
+}
+
+fn make_spawns() -> ArrayVec<[Position; SPAWN_COUNT]> {
+    let mut result: ArrayVec<[Position; SPAWN_COUNT]> = ArrayVec::new();
+    let max = TILES_PER_ROW - 1;
+
+    for x in 0..TILES_PER_ROW {
+        result.push((x, 0, 4));
+        result.push((x, 0, 5));
+
+        result.push((x, max, 0));
+        result.push((x, max, 1));
+    }
+
+    for y in 0..TILES_PER_ROW {
+        result.push((0, y, 6));
+        result.push((0, y, 7));
+
+        result.push((max, y, 2));
+        result.push((max, y, 3));
+    }
+
+    result
 }
 
 impl Rotation {
