@@ -91,29 +91,50 @@ impl Board {
 
         self.stones.values()
             .filter(|&stone| is_affected(stone.position, row, col))
-            .map(|stone| calculate_path(stone, &tile));
+            .map(|stone| self.calculate_path(stone));
+    }
+
+
+    fn calculate_path(&self, stone: &Stone) {
+        get_facing_coords(stone.position);
+
     }
 }
 
-// Returns true if a stone at (stone_row, stone_col, index) is affected by placing a tile at row, col
-fn is_affected((stone_row, stone_col, index): Position, row: usize, col: usize) -> bool {
+// Returns true if a stone at the specified position is affected by placing a tile at row, col
+fn is_affected(stone_position: Position, row: usize, col: usize) -> bool {
+    let (stone_row, stone_col, _) = stone_position;
     if stone_row == row && stone_col == col {
         return true;
     }
 
-    let (facing_row, facing_col) = match index {
+    let (facing_row, facing_col) = get_facing_coords(stone_position);
+
+    facing_col == col && facing_row == row
+}
+
+fn get_facing_coords((stone_row, stone_col, index): Position) -> (usize, usize) {
+    match index {
         0 | 1 => (stone_row + 1, stone_col),
         2 | 3 => (stone_row, stone_col + 1),
         4 | 5 => (stone_row - 1, stone_col),
         6 | 7 => (stone_row, stone_col - 1),
         _ => panic!("non existent path index {}", index)
-    };
-
-    facing_col == col && facing_row == row
+    }
 }
 
-fn calculate_path(stone: &Stone, tile: &Tile) {
-
+fn complementary_path_index(index: PathIndex) -> PathIndex {
+    match index {
+        0 => 5,
+        1 => 4,
+        2 => 7,
+        3 => 6,
+        4 => 1,
+        5 => 0,
+        6 => 3,
+        7 => 2,
+        _ => panic!("non existent path index {}", index)
+    }
 }
 
 fn make_spawns() -> ArrayVec<[Position; SPAWN_COUNT]> {
@@ -150,6 +171,21 @@ impl Rotation {
 
         let (new_from, new_to) = (from + offset, to + offset);
         (new_from % 8, new_to % 8)
+    }
+}
+
+impl Tile {
+    pub fn rotated(&self) -> Tile {
+        match *self {
+            Tile::DragonTile => *self,
+            Tile::PathTile {paths, rotation} => {
+                let rotated_paths = paths.iter()
+                    .map(|path| rotation.apply(path))
+                    .collect();
+
+                Tile::PathTile { paths: rotated_paths, rotation}
+            }
+        }
     }
 }
 

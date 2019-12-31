@@ -24,14 +24,14 @@ impl State for Game {
 
         let mut board = Board::with_players(players);
 
-/*
+
         for row in 0..TILES_PER_ROW {
             for col in 0..TILES_PER_ROW {
                 deck.pop_tile()
                     .map(|tile| board.place_tile(row, col, tile));
             }
         }
-*/
+
 
         Ok(Self {deck, board})
     }
