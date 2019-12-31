@@ -4,6 +4,7 @@ use std::ops::{Deref, Neg};
 use crate::model::*;
 use crate::model::Tile;
 use std::collections::HashMap;
+use std::borrow::Borrow;
 
 const SCALE: u32 = 2;
 pub const SCREEN_WIDTH: u32 = 600 * SCALE;
@@ -76,8 +77,8 @@ fn draw_tile(tile: &Tile, x: usize, y: usize, window:&mut Window) -> () {
 
     window.draw(&rect, Col(Color::from_rgba(121, 35, 20, 1.0)));
 
-    if let Tile::PathTile { paths, rotation } = tile {
-        draw_paths(paths, rotation, x, y, window)
+    if let Tile::PathTile { paths } = tile {
+        draw_paths(paths, x, y, window)
     }
 }
 
@@ -85,10 +86,9 @@ fn draw_empty_space(x: usize, y: usize, window:&mut Window) -> () {
     window.draw(&tile_square_at(x, y), Col(Color::BLACK));
 }
 
-fn draw_paths(paths:&[Path; 4], rotation: &Rotation, x: usize, y: usize, window: &mut Window) {
+fn draw_paths(paths:&[Path; 4], x: usize, y: usize, window: &mut Window) {
     paths.iter()
-        .map(|path| rotation.apply(path))
-        .for_each(|(from, to)| {
+        .for_each(|&(from, to)| {
             let start_segment = path_edge_segment(from);
             let end_segment = path_edge_segment(to);
             let middle_segment = Line::new(start_segment.b, end_segment.b);

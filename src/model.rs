@@ -48,10 +48,7 @@ pub struct Deck {
 #[derive(Debug, Copy, Clone)]
 pub enum Tile {
     DragonTile,
-    PathTile {
-        paths: [Path; 4],
-        rotation: Rotation
-    },
+    PathTile { paths: [Path; 4] },
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -178,12 +175,12 @@ impl Tile {
     pub fn rotated(&self) -> Tile {
         match *self {
             Tile::DragonTile => *self,
-            Tile::PathTile {paths, rotation} => {
+            Tile::PathTile {paths} => {
                 let rotated_paths = paths.iter()
                     .map(|path| rotation.apply(path))
                     .collect();
 
-                Tile::PathTile { paths: rotated_paths, rotation}
+                Tile::PathTile { paths: rotated_paths }
             }
         }
     }
@@ -231,8 +228,6 @@ impl Deck {
 
         let paths = paths.into_inner().unwrap();
 
-        let rotation = Rotation::_0;
-
-        Ok(Tile::PathTile { paths, rotation })
+        Ok(Tile::PathTile { paths })
     }
 }
