@@ -158,7 +158,20 @@ fn make_spawns() -> ArrayVec<[Position; SPAWN_COUNT]> {
 }
 
 impl Rotation {
-    pub fn apply(&self, (from, to): &Path) -> Path {
+    pub fn rotate_tile(&self, tile: &Tile) -> Tile {
+        match *tile {
+            Tile::DragonTile => *tile,
+            Tile::PathTile {paths} => {
+                let rotated_paths = paths.iter()
+                    .map(|path| self.rotate_path(path))
+                    .collect();
+
+                Tile::PathTile { paths: rotated_paths }
+            }
+        }
+    }
+
+    fn rotate_path(&self, (from, to): &Path) -> Path {
         let offset = match *self {
             Rotation::_0   => 0,
             Rotation::_90  => 2,
@@ -171,20 +184,6 @@ impl Rotation {
     }
 }
 
-impl Tile {
-    pub fn rotated(&self) -> Tile {
-        match *self {
-            Tile::DragonTile => *self,
-            Tile::PathTile {paths} => {
-                let rotated_paths = paths.iter()
-                    .map(|path| rotation.apply(path))
-                    .collect();
-
-                Tile::PathTile { paths: rotated_paths }
-            }
-        }
-    }
-}
 
 impl Deck {
     pub fn pop_tile(&mut self) -> Option<Tile> {
