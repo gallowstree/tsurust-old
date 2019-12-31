@@ -88,7 +88,32 @@ impl Board {
 
     pub fn place_tile(&mut self, row: usize, col: usize, tile: Tile) -> () {
         self.grid[row][col] = Some(tile);
+
+        self.stones.values()
+            .filter(|&stone| is_affected(stone.position, row, col))
+            .map(|stone| calculate_path(stone, &tile));
     }
+}
+
+// Returns true if a stone at (stone_row, stone_col, index) is affected by placing a tile at row, col
+fn is_affected((stone_row, stone_col, index): Position, row: usize, col: usize) -> bool {
+    if stone_row == row && stone_col == col {
+        return true;
+    }
+
+    let (facing_row, facing_col) = match index {
+        0 | 1 => (stone_row + 1, stone_col),
+        2 | 3 => (stone_row, stone_col + 1),
+        4 | 5 => (stone_row - 1, stone_col),
+        6 | 7 => (stone_row, stone_col - 1),
+        _ => panic!("non existent path index {}", index)
+    };
+
+    facing_col == col && facing_row == row
+}
+
+fn calculate_path(stone: &Stone, tile: &Tile) {
+
 }
 
 fn make_spawns() -> ArrayVec<[Position; SPAWN_COUNT]> {
