@@ -1,4 +1,5 @@
 use tsurust::model::*;
+use tsurust::model::{Tile};
 use quicksilver::prelude::*;
 use tsurust::ui::{SCREEN_WIDTH, SCREEN_HEIGHT};
 use std::collections::HashMap;
@@ -24,6 +25,7 @@ impl State for Game {
 
         let mut board = Board::with_players(players);
 
+/*
 
         for row in 0..TILES_PER_ROW {
             for col in 0..TILES_PER_ROW {
@@ -31,7 +33,9 @@ impl State for Game {
                     .map(|tile| board.place_tile(row, col, tile));
             }
         }
-
+*/
+        let tile = Tile::PathTile {paths: [(0, 5), (1,2), (3,4), (6,7)]};
+        board.place_tile(0,0, Rotation::_90.rotate_tile(&tile));
 
         Ok(Self {deck, board})
     }

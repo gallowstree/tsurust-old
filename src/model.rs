@@ -20,14 +20,15 @@ pub const SPAWN_COUNT : usize = TILES_PER_ROW * 2 * 4;
 */
 pub type PathIndex = u8;
 pub type Path = (PathIndex, PathIndex); // (from, to)
-pub type Position = (usize, usize, usize); // (row, column, path_index)
+pub type Position = (usize, usize, PathIndex); // (row, column, path_index)
+//TODO perhaps use usize for all? or u8 for all?
 
 pub struct Tsurust {
     deck: Deck,
     pub board: Board,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum PlayerColor {
     WHITE, RED, YELLOW,
     BLUE, GRAY, ORANGE,
@@ -51,6 +52,25 @@ pub enum Tile {
     PathTile { paths: [Path; 4] },
 }
 
+impl Tile {
+    fn get_other_end(&self, from_index: PathIndex) -> PathIndex {
+        if let Tile::PathTile {paths} = self {
+            let &(a, b) = paths
+                .iter()
+                .find(|(from, to)| *from == from_index as u8|| *to == from_index as u8)
+                .expect("malformed tile");
+
+            return if a != from_index {a} else {b}
+        }
+
+        panic!("trying to move across dragon tile")
+    }
+
+    fn rotate(&self) -> Tile {
+        *self //TODO: me
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub enum Rotation {
     _0,
@@ -59,9 +79,21 @@ pub enum Rotation {
     _270,
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct Stone {
     pub color:PlayerColor,
     pub position: Position
+}
+
+impl Stone {
+    fn with_position(&self, position: Position) -> Stone {
+        Stone {color: self.color, position}
+    }
+
+    fn is_at_coords(&self, row: usize, col: usize) -> bool {
+        let (curr_row, curr_col, _) = self.position;
+        curr_row == row && curr_col == col
+    }
 }
 
 impl Default for Board {
@@ -86,15 +118,54 @@ impl Board {
     pub fn place_tile(&mut self, row: usize, col: usize, tile: Tile) -> () {
         self.grid[row][col] = Some(tile);
 
-        self.stones.values()
+        let routes_by_stone: Vec<(Stone, Vec<Position>)> = self.stones.values()
+            .into_iter()
             .filter(|&stone| is_affected(stone.position, row, col))
-            .map(|stone| self.calculate_path(stone));
+            .map(|&stone| (stone, self.calculate_path(stone, stone.is_at_coords(row, col)))) //todo maybe good to keep routes in stones
+            .collect();
+
+        for (stone, route) in routes_by_stone {
+            let &position = route.last().unwrap_or_else(|| {&stone.position});
+            self.stones.insert(stone.color, Stone {color: stone.color, position}); //todo create stone.with_position
+        }
+
     }
 
 
-    fn calculate_path(&self, stone: &Stone) {
-        get_facing_coords(stone.position);
+    fn calculate_path(&self, stone: Stone, is_at_initial_pos: bool) -> Vec<Position> {
 
+        fn calculate(current_pos: Position, mut route: Vec<Position>, grid: [[Option<Tile> ; TILES_PER_ROW] ; TILES_PER_ROW]) -> Vec<Position> {
+            if let Some((next_row, next_col, next_from_index)) = get_facing_position(current_pos) {
+
+                match grid[next_row][next_col] {
+                    Some(tile @ Tile::PathTile {paths: _}) => {
+
+                        let next_pos = (next_row, next_col, tile.get_other_end(next_from_index));
+
+                        route.push(next_pos);
+
+                        calculate(next_pos, route, grid)
+                    },
+                    _ => route
+                }
+            } else { route }
+        };
+
+        let mut route = Vec::new();
+        let current_pos= if is_at_initial_pos {
+            let (row, col, i) = stone.position;
+
+            let curr_tile = self.grid[row][col].expect("tile should be placed");
+            let advanced_position = (row, col, curr_tile.get_other_end(i));
+
+            route.push(stone.position); //not sure if needed
+            route.push(advanced_position);
+            advanced_position
+        } else {
+            stone.position
+        };
+
+        calculate(current_pos, route, self.grid)
     }
 }
 
@@ -105,23 +176,25 @@ fn is_affected(stone_position: Position, row: usize, col: usize) -> bool {
         return true;
     }
 
-    let (facing_row, facing_col) = get_facing_coords(stone_position);
-
-    facing_col == col && facing_row == row
+    match get_facing_position(stone_position) {
+        Some((facing_row, facing_col, _)) => facing_col == col && facing_row == row,
+        None => false
+    }
 }
 
-fn get_facing_coords((stone_row, stone_col, index): Position) -> (usize, usize) {
-    match index {
+fn get_facing_position((stone_row, stone_col, index): Position) -> Option<Position> {
+    let (stone_row, stone_col) = (stone_row as i8, stone_col as i8);
+    let (next_row, next_col) = match index {
         0 | 1 => (stone_row + 1, stone_col),
         2 | 3 => (stone_row, stone_col + 1),
         4 | 5 => (stone_row - 1, stone_col),
         6 | 7 => (stone_row, stone_col - 1),
         _ => panic!("non existent path index {}", index)
-    }
-}
+    };
 
-fn complementary_path_index(index: PathIndex) -> PathIndex {
-    match index {
+    if next_row < 0 || next_col < 0 { return None }
+
+    let next_index = match index {
         0 => 5,
         1 => 4,
         2 => 7,
@@ -131,7 +204,9 @@ fn complementary_path_index(index: PathIndex) -> PathIndex {
         6 => 3,
         7 => 2,
         _ => panic!("non existent path index {}", index)
-    }
+    };
+
+    Some((next_row as usize, next_col as usize, next_index))
 }
 
 fn make_spawns() -> ArrayVec<[Position; SPAWN_COUNT]> {
@@ -162,11 +237,11 @@ impl Rotation {
         match *tile {
             Tile::DragonTile => *tile,
             Tile::PathTile {paths} => {
-                let rotated_paths = paths.iter()
+                let rotated_paths: ArrayVec<[Path; 4]>= paths.into_iter()
                     .map(|path| self.rotate_path(path))
                     .collect();
 
-                Tile::PathTile { paths: rotated_paths }
+                Tile::PathTile { paths: rotated_paths.into_inner().unwrap() }
             }
         }
     }

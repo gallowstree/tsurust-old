@@ -75,7 +75,7 @@ impl Board {
 fn draw_tile(tile: &Tile, x: usize, y: usize, window:&mut Window) -> () {
     let rect = tile_square_at(x, y);
 
-    window.draw(&rect, Col(Color::from_rgba(121, 35, 20, 1.0)));
+    window.draw(&rect, Col(Color::from_rgba(121, 45, 27, 1.0)));
 
     if let Tile::PathTile { paths } = tile {
         draw_paths(paths, x, y, window)
