@@ -36,6 +36,7 @@ impl State for Game {
 */
         let tile = Tile::PathTile {paths: [(0, 5), (1,2), (3,4), (6,7)]};
         board.place_tile(0,0, Rotation::_90.rotate_tile(&tile));
+        board.place_tile(0,1, Rotation::_90.rotate_tile(&tile));
 
         Ok(Self {deck, board})
     }
