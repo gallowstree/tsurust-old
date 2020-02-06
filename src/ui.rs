@@ -49,22 +49,21 @@ impl Board {
     }
 
     fn draw_spawns(&self, window:&mut Window) {
-        self.spawns.iter().for_each(|spawn|{
-            let &(row, col, i) = spawn;
+        self.spawns.iter().for_each(|spawn: &Position|{
             let thickness = PATH_THICKNESS as f32 * 1.5;
             let length = THIRD as f32 / 4.0;
 
-            let center = path_index_position(i as PathIndex);
+            let center = path_index_position(spawn.path_index as PathIndex);
 
-            let size = match i {
+            let size = match spawn.path_index {
                 0 | 1 | 4 | 5 => (thickness, length),
                 2 | 3 | 6 | 7 => (length, thickness),
-                _ => panic!("non existent path index {}", i)
+                _ => panic!("non existent path index {}", spawn.path_index)
             };
 
             let rect = Rectangle::new_sized(size)
                                  .with_center(center)
-                                 .translate(coords_to_vec(row, col));
+                                 .translate(coords_to_vec(spawn.row, spawn.col));
 
             window.draw(&rect, Col(Color::WHITE));
         });
@@ -88,7 +87,7 @@ fn draw_empty_space(x: usize, y: usize, window:&mut Window) -> () {
 
 fn draw_paths(paths:&[Path; 4], x: usize, y: usize, window: &mut Window) {
     paths.iter()
-        .for_each(|&(from, to)| {
+        .for_each(|&Path {a: from, b: to}| {
             let start_segment = path_edge_segment(from);
             let end_segment = path_edge_segment(to);
             let middle_segment = Line::new(start_segment.b, end_segment.b);
@@ -182,9 +181,9 @@ fn coords_to_vec(x: usize, y: usize) -> Vector {
     Vector::new(x as u32 * TILE_SIDE_LENGTH + BOARD_BORDER, y as u32 * TILE_SIDE_LENGTH + BOARD_BORDER)
 }
 
-fn to_pixels((row, col, index): Position) -> (u32, u32) {
-    let (x, y) = coords_to_pixels(col, row);
-    let (offset_x, offset_y) = path_index_position(index as PathIndex);
+fn to_pixels(pos: Position) -> (u32, u32) {
+    let (x, y) = coords_to_pixels(pos.col, pos.row);
+    let (offset_x, offset_y) = path_index_position(pos.path_index as PathIndex);
     (x + offset_x, y + offset_y)
 }
 

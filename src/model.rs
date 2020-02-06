@@ -22,8 +22,8 @@ pub type PathIndex = u8;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Path {
-    a: PathIndex,
-    b: PathIndex
+    pub a: PathIndex,
+    pub b: PathIndex
 }
 
 impl Path {
@@ -35,9 +35,9 @@ impl Path {
 
 #[derive(Debug, Copy, Clone)]
 pub struct Position {
-    row: usize,
-    col: usize,
-    path_index: PathIndex//TODO perhaps use usize for all? or u8 for all?
+    pub row: usize,
+    pub col: usize,
+    pub path_index: PathIndex//TODO perhaps use usize for all? or u8 for all?
 }
 
 impl Position {
@@ -178,12 +178,12 @@ impl Board {
     fn calculate_path(&self, stone: Stone, is_at_initial_pos: bool) -> Vec<Position> {
 
         fn calculate(current_pos: Position, mut route: Vec<Position>, grid: [[Option<Tile> ; TILES_PER_ROW] ; TILES_PER_ROW]) -> Vec<Position> {
-            if let Some((next_row, next_col, next_from_index)) = get_facing_position(current_pos) {
+            if let Some(Position {row, col, path_index}) = get_facing_position(current_pos) {
 
-                match grid[next_row][next_col] {
+                match grid[row][col] {
                     Some(tile @ Tile::PathTile {paths: _}) => {
 
-                        let next_pos = (next_row, next_col, tile.get_other_end(next_from_index));
+                        let next_pos = Position {row, col, path_index: tile.get_other_end(path_index)};
 
                         route.push(next_pos);
 
@@ -255,19 +255,19 @@ fn make_spawns() -> ArrayVec<[Position; SPAWN_COUNT]> {
     let max = TILES_PER_ROW - 1;
 
     for x in 0..TILES_PER_ROW {
-        result.push((x, 0, 4));
-        result.push((x, 0, 5));
+        result.push(Position { row: x, col: 0, path_index: 4 });
+        result.push(Position { row: x, col: 0, path_index: 5 });
 
-        result.push((x, max, 0));
-        result.push((x, max, 1));
+        result.push(Position { row: x, col: max, path_index: 0 });
+        result.push(Position { row: x, col: max, path_index: 1 });
     }
 
     for y in 0..TILES_PER_ROW {
-        result.push((0, y, 6));
-        result.push((0, y, 7));
+        result.push(Position { row: 0, col: y, path_index: 6 });
+        result.push(Position { row: 0, col: y, path_index: 7 });
 
-        result.push((max, y, 2));
-        result.push((max, y, 3));
+        result.push(Position { row: max, col: y, path_index: 2 });
+        result.push(Position { row: max, col: y, path_index: 3 });
     }
 
     result
@@ -311,6 +311,7 @@ impl Deck {
 
         let paths : ArrayVec<[Path; 4]> = digits?.into_iter()
             .tuples()
+            .map(|(a,b)| Path {a, b})
             .collect();
 
         let paths = paths.into_inner().unwrap();
