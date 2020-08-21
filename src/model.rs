@@ -225,7 +225,7 @@ fn is_affected(stone_position: Position, row: usize, col: usize) -> bool {
 
 fn get_facing_position(current: Position) -> Option<Position> {
     let (current_row, current_col) = (current.row as i8, current.col as i8);
-    let (next_row, next_col) = match current.path_index {
+    let (facing_row, facing_col) = match current.path_index {
         0 | 1 => (current_row + 1, current_col),
         2 | 3 => (current_row, current_col + 1),
         4 | 5 => (current_row - 1, current_col),
@@ -233,9 +233,9 @@ fn get_facing_position(current: Position) -> Option<Position> {
         _ => panic!("non existent path index {}",  current.path_index)
     };
 
-    if next_row < 0 || next_col < 0 { return None }
+    if facing_row < 0 || facing_col < 0 { return None }
 
-    let next_index = match current.path_index {
+    let facing_index = match current.path_index {
         0 => 5,
         1 => 4,
         2 => 7,
@@ -247,7 +247,7 @@ fn get_facing_position(current: Position) -> Option<Position> {
         _ => panic!("non existent path index {}",  current.path_index)
     };
 
-    Some(Position {row: next_row as usize, col: next_col as usize, path_index: next_index})
+    Some(Position {row: facing_row as usize, col: facing_col as usize, path_index: facing_index })
 }
 
 fn make_spawns() -> ArrayVec<[Position; SPAWN_COUNT]> {
