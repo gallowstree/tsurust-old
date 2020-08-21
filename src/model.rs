@@ -84,8 +84,8 @@ pub enum RotationDirection {
 impl RotationDirection {
     fn offset(&self) -> PathIndex {
         match *self {
-            RotationDirection::CLOCKWISE => 2,
-            RotationDirection::COUNTERCLOCKWISE => 6, //should be -2 but % is not equivalent to mod with negative numbers
+            RotationDirection::COUNTERCLOCKWISE => 2,
+            RotationDirection::CLOCKWISE => 6, //should be -2 but % is not equivalent to mod with negative numbers
         }
     }
 }
